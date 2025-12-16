@@ -1,0 +1,135 @@
+using UnityEngine;
+
+public class SnakeEnemy : MonoBehaviour
+{
+    [Header("Movement")]
+    public float patrolSpeed = 2f;
+    public float chaseSpeed = 3f;
+    public float detectionRange = 5f;
+    public float attackRange = 1f;
+
+    [Header("Attack")]
+    public float attackCooldown = 1.5f;
+
+    Transform player;
+    Animator anim;
+    float lastAttack = 0f;
+
+    bool movingRight = true;
+    public Transform groundCheck;
+    public LayerMask groundLayer;
+
+    enum State { Patrol, Chase, Attack }
+    State currentState = State.Patrol;
+
+    void Start()
+    {
+        player = GameObject.FindWithTag("Player").transform;
+        anim = GetComponent<Animator>();
+    }
+
+    void Update()
+    {
+        float dist = Vector2.Distance(transform.position, player.position);
+
+        switch (currentState)
+        {
+            case State.Patrol:
+                Patrol();
+                anim.SetBool("isMoving", true);
+
+                if (dist < detectionRange)
+                    currentState = State.Chase;
+                break;
+
+            case State.Chase:
+                Chase();
+                anim.SetBool("isMoving", true);
+
+                if (dist < attackRange)
+                    currentState = State.Attack;
+
+                if (dist > detectionRange + 1)
+                    currentState = State.Patrol;
+                break;
+
+            case State.Attack:
+                anim.SetBool("isMoving", false);
+                Attack();
+                currentState = State.Chase;
+                break;
+        }
+    }
+
+   
+    // PATROL MOVEMENT
+   
+    void Patrol()
+    {
+        float dir = movingRight ? 1 : -1;
+        transform.Translate(Vector2.right * patrolSpeed * Time.deltaTime * dir);
+
+        // Turn around at edge
+        if (!Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer))
+            Flip();
+    }
+
+   
+    // CHASE PLAYER
+   
+    void Chase()
+    {
+        if (player.position.x > transform.position.x)
+        {
+            if (!movingRight) Flip();
+            transform.Translate(Vector2.right * chaseSpeed * Time.deltaTime);
+        }
+        else
+        {
+            if (movingRight) Flip();
+            transform.Translate(Vector2.left * chaseSpeed * Time.deltaTime);
+        }
+    }
+
+    
+    // ATTACK: Bite + Lunge
+   
+    void Attack()
+    {
+        if (Time.time - lastAttack < attackCooldown)
+            return;
+
+        lastAttack = Time.time;
+
+        anim.SetTrigger("Attack"); // Play attack animation
+
+        // Lunge movement (quick bite)
+        StartCoroutine(LungeAtPlayer());
+    }
+
+    System.Collections.IEnumerator LungeAtPlayer()
+    {
+        float time = 0.12f;
+        float t = 0;
+
+        Vector2 direction = (player.position - transform.position).normalized;
+
+        while (t < time)
+        {
+            transform.Translate(direction * 4f * Time.deltaTime);
+            t += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    
+    // TURN SNAKE AROUND
+  
+    void Flip()
+    {
+        movingRight = !movingRight;
+        Vector3 scale = transform.localScale;
+        scale.x *= -1;
+        transform.localScale = scale;
+    }
+}
