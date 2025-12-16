@@ -7,38 +7,16 @@ public class Movement : MonoBehaviour
 
     public float speed = 5f;
     public float jumpforce = 2f;
-    float horizontal_movemnt;
+    Vector2 horizontal_movemnt;
 
-    bool grounded = false;
     public void Move(InputAction.CallbackContext cbc)
     {
-        horizontal_movemnt = cbc.ReadValue<Vector2>().x;
-    }
-    public void Jump(InputAction.CallbackContext cbc)
-    {
-        if (grounded)
-        {
-            rb.AddForce(Vector2.up * jumpforce, ForceMode2D.Impulse);
-        }
-    }
-    private void Update()
-    {
-        rb.linearVelocity = new Vector2(horizontal_movemnt * speed, rb.linearVelocity.y);
+        horizontal_movemnt = cbc.ReadValue<Vector2>();
     }
 
-    private void OnCollisionEnter2D(Collision2D col)
+    private void FixedUpdate()
     {
-        if (col.gameObject.CompareTag("Ground"))
-        {
-            grounded = true;
-        }
+        rb.linearVelocity = horizontal_movemnt * speed;
     }
 
-    private void OnCollisionExit2D(Collision2D col)
-    {
-        if (col.gameObject.CompareTag("Ground"))
-        {
-            grounded = false;
-        }
-    }
 }
